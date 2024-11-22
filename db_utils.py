@@ -43,32 +43,35 @@ class DatabaseConnection:
         """Verify user credentials using ed25519."""
         cursor = self.get_cursor()
         try:
-            # Get user information
+            # First check Admin table
+            logger.debug(f"Checking admin credentials for: {username}")
             cursor.execute("""
-                SELECT 'user' as type, user_id as id, is_certified 
-                FROM User WHERE username = %s
-                UNION
-                SELECT 'admin' as type, admin_id as id, 1 as is_certified 
+                SELECT 'admin' as type, admin_id as id, password 
                 FROM Admin WHERE username = %s
-            """, (username, username))
+            """, (username,))
             
-            result = cursor.fetchone()
-            
-            if not result:
-                logger.warning(f"No user found: {username}")
-                return False, "Invalid username or password", None
+            admin = cursor.fetchone()
+            if admin:
+                cursor.execute("SELECT ed25519_password(%s) = %s", (password, admin[2]))
+                if cursor.fetchone()[0]:
+                    logger.info(f"Successful admin login: {username}")
+                    return True, "Login successful", ('admin', admin[1])
 
-            # Verify password using ed25519
-            cursor.execute("SELECT ed25519_password(%s) = password FROM User WHERE username = %s", 
-                         (password, username))
-            is_valid = cursor.fetchone()
+            # Then check User table (only if not an admin)
+            logger.debug(f"Checking user credentials for: {username}")
+            cursor.execute("""
+                SELECT user_id, password, is_certified 
+                FROM User WHERE username = %s
+            """, (username,))
             
-            if is_valid and is_valid[0]:
-                logger.info(f"Successful login: {username}")
-                return True, "Login successful", result
-            else:
-                logger.warning(f"Invalid password for user: {username}")
-                return False, "Invalid username or password", None
+            user = cursor.fetchone()
+            if user:
+                cursor.execute("SELECT ed25519_password(%s) = %s", (password, user[1]))
+                if cursor.fetchone()[0]:
+                    return True, "Login successful", ('user', user[0])
+
+            logger.warning(f"Invalid credentials for: {username}")
+            return False, "Invalid username or password", None
 
         except Exception as e:
             logger.error(f"Login verification error: {str(e)}")
@@ -83,7 +86,6 @@ class DatabaseConnection:
             session_id = secrets.token_hex(32)
             ip_address = socket.gethostbyname(socket.gethostname())
             expiry_time = datetime.now() + timedelta(hours=24)
-            
             cursor.execute("""
                 INSERT INTO Sessions (session_id, user_id, user_type, expiry_time, ip_address)
                 VALUES (%s, %s, %s, %s, %s)
@@ -129,8 +131,14 @@ class DatabaseConnection:
         """Create new user with secure password."""
         cursor = self.get_cursor()
         try:
-            # Check if username exists
-            cursor.execute("SELECT COUNT(*) FROM User WHERE username = %s", (username,))
+            # Check if username exists in both User and Admin tables
+            cursor.execute("""
+                SELECT COUNT(*) FROM (
+                    SELECT username FROM User WHERE username = %s
+                    UNION
+                    SELECT username FROM Admin WHERE username = %s
+                ) as users
+            """, (username, username))
             if cursor.fetchone()[0] > 0:
                 return False, "Username already exists"
                 
@@ -147,31 +155,154 @@ class DatabaseConnection:
             return False, f"Error creating user: {str(e)}"
         finally:
             cursor.close()
+
     def change_password(self, user_id: str, current_password: str, new_password: str) -> tuple:
         """Change user password with verification."""
         cursor = self.get_cursor()
         try:
-            # Verify current password
-            cursor.execute("""
-                SELECT username FROM User 
-                WHERE user_id = %s AND password = ed25519_password(%s)
-            """, (user_id, current_password))
-            
-            if not cursor.fetchone():
-                return False, "Current password is incorrect"
-            
-            # Update to new password
-            cursor.execute("""
-                UPDATE User 
-                SET password = ed25519_password(%s) 
-                WHERE user_id = %s
-            """, (new_password, user_id))
+            # Check if user is admin
+            cursor.execute("SELECT COUNT(*) FROM Admin WHERE admin_id = %s", (user_id,))
+            is_admin = cursor.fetchone()[0] > 0
+
+            if is_admin:
+                # Verify current admin password
+                cursor.execute("""
+                    SELECT username FROM Admin 
+                    WHERE admin_id = %s AND password = ed25519_password(%s)
+                """, (user_id, current_password))
+                
+                if not cursor.fetchone():
+                    return False, "Current password is incorrect"
+                
+                # Update admin password
+                cursor.execute("""
+                    UPDATE Admin 
+                    SET password = ed25519_password(%s) 
+                    WHERE admin_id = %s
+                """, (new_password, user_id))
+            else:
+                # Verify current user password
+                cursor.execute("""
+                    SELECT username FROM User 
+                    WHERE user_id = %s AND password = ed25519_password(%s)
+                """, (user_id, current_password))
+                
+                if not cursor.fetchone():
+                    return False, "Current password is incorrect"
+                
+                # Update user password
+                cursor.execute("""
+                    UPDATE User 
+                    SET password = ed25519_password(%s) 
+                    WHERE user_id = %s
+                """, (new_password, user_id))
             
             self.conn.commit()
             return True, "Password changed successfully"
         except Exception as e:
             logger.error(f"Password change error: {str(e)}")
             return False, f"Error changing password: {str(e)}"
+        finally:
+            cursor.close()
+
+    def create_user_by_admin(self, first_name: str, last_name: str, username: str, 
+                           password: str, is_certified: bool) -> tuple:
+        """Create new user with admin privileges."""
+        cursor = self.get_cursor()
+        try:
+            # Check if username exists
+            cursor.execute("""
+                SELECT COUNT(*) FROM (
+                    SELECT username FROM User WHERE username = %s
+                    UNION
+                    SELECT username FROM Admin WHERE username = %s
+                ) as users
+            """, (username, username))
+            if cursor.fetchone()[0] > 0:
+                return False, "Username already exists"
+                
+            # Create user with ed25519 password
+            cursor.execute("""
+                INSERT INTO User (first_name, last_name, username, password, is_certified)
+                VALUES (%s, %s, %s, ed25519_password(%s), %s)
+            """, (first_name, last_name, username, password, is_certified))
+            
+            self.conn.commit()
+            return True, "User created successfully"
+        except Exception as e:
+            logger.error(f"User creation error: {str(e)}")
+            return False, f"Error creating user: {str(e)}"
+        finally:
+            cursor.close()
+
+    def get_all_users(self) -> list:
+        """Get list of all users."""
+        cursor = self.get_cursor()
+        try:
+            cursor.execute("""
+                SELECT user_id, first_name, last_name, username, password, is_certified 
+                FROM User 
+                ORDER BY user_id
+            """)
+            return cursor.fetchall()
+        finally:
+            cursor.close()
+
+    def toggle_user_certification(self, user_id: str) -> tuple:
+        """Toggle user certification status."""
+        cursor = self.get_cursor()
+        try:
+            # Check if user exists and get current status
+            cursor.execute("""
+                SELECT username, is_certified 
+                FROM User 
+                WHERE user_id = %s
+            """, (user_id,))
+            
+            result = cursor.fetchone()
+            if not result:
+                logger.warning(f"Attempted to toggle certification for non-existent user ID: {user_id}")
+                return False, "User not found"
+                
+            username, current_status = result
+            
+            # Toggle the status
+            new_status = not current_status
+            cursor.execute("""
+                UPDATE User 
+                SET is_certified = %s 
+                WHERE user_id = %s
+            """, (new_status, user_id))
+            
+            self.conn.commit()
+            
+            status_text = "certified" if new_status else "uncertified"
+            logger.info(f"User {username} (ID: {user_id}) is now {status_text}")
+            return True, f"User {username} is now {status_text}"
+            
+        except Exception as e:
+            logger.error(f"Error toggling certification: {str(e)}")
+            return False, f"Error updating certification: {str(e)}"
+        finally:
+            cursor.close()
+
+    def is_admin(self, user_id: str) -> bool:
+        """Check if user is an admin."""
+        cursor = self.get_cursor()
+        try:
+            # The issue was we were checking user_id against admin_id directly
+            # We need to check if this user exists in the Admin table
+            cursor.execute("""
+                SELECT username FROM Admin 
+                WHERE admin_id = %s
+            """, (user_id,))
+            result = cursor.fetchone()
+            is_admin = result is not None
+            logger.debug(f"Admin check for user {user_id}: {'Yes' if is_admin else 'No'}")
+            return is_admin
+        except Exception as e:
+            logger.error(f"Admin check error: {str(e)}")
+            return False
         finally:
             cursor.close()
 

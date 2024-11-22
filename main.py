@@ -6,6 +6,7 @@ from update import init_update_frame
 from db_utils import db
 from signup import init_signup_frame
 from password_change import init_password_change_frame
+from admin_panel import init_admin_panel
 
 class WildlifeApp:
     def __init__(self, root):
@@ -30,7 +31,8 @@ class WildlifeApp:
         self.insert_frame = None
         self.delete_frame = None
         self.update_frame = None
-        self.password_frame = None  # Added this line
+        self.password_frame = None
+        self.admin_frame = None
 
         # Show login frame
         self.show_login_frame()
@@ -59,6 +61,7 @@ class WildlifeApp:
         Button(frame, text="Delete", command=lambda: self.show_frame('delete')).pack(pady=10)
         Button(frame, text="Update", command=lambda: self.show_frame('update')).pack(pady=10)
         Button(frame, text="Change Password", command=lambda: self.show_frame('password')).pack(pady=10)
+        Button(frame, text="Admin Panel", command=self.show_admin_panel).pack(pady=10)
         Button(frame, text="Logout", command=self.logout, font=("Helvetica", 12)).pack(pady=20)
         
         return frame
@@ -99,11 +102,11 @@ class WildlifeApp:
     def show_login_frame(self):
         # Hide all other frames
         frames = [self.launch_frame, self.insert_frame, self.delete_frame, 
-                 self.update_frame, self.signup_frame]
+                 self.update_frame, self.signup_frame, self.admin_frame]
         for frame in frames:
             if frame:
                 frame.pack_forget()
-        if self.password_frame:  # Check if password_frame exists before hiding
+        if self.password_frame:
             self.password_frame.pack_forget()
         self.login_frame.pack()
 
@@ -112,8 +115,30 @@ class WildlifeApp:
         self.signup_frame.pack()
 
     def show_launch_frame(self):
-        self.login_frame.pack_forget()
+        # Hide all frames except launch
+        frames = [self.login_frame, self.insert_frame, self.delete_frame, 
+                 self.update_frame, self.signup_frame, self.admin_frame]
+        for frame in frames:
+            if frame:
+                frame.pack_forget()
+        if self.password_frame:
+            self.password_frame.pack_forget()
         self.launch_frame.pack()
+
+    def show_admin_panel(self):
+        if not self.verify_session():
+            messagebox.showerror("Error", "Session expired. Please login again.")
+            self.show_login_frame()
+            return
+
+        if not db.is_admin(self.user_id.get()):
+            messagebox.showerror("Error", "Access denied. Admin privileges required.")
+            return
+            
+        self.launch_frame.pack_forget()
+        if not self.admin_frame:
+            self.admin_frame = init_admin_panel(self.root, self.user_id, self.show_launch_frame)
+        self.admin_frame.pack()
 
     def show_frame(self, frame_name):
         if not self.verify_session():
