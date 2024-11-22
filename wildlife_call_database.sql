@@ -28,7 +28,10 @@ CREATE TABLE `Admin` (
   `first_name` varchar(50) DEFAULT NULL,
   `last_name` varchar(50) DEFAULT NULL,
   `username` varchar(50) NOT NULL,
-  `password` varchar(255) NOT NULL,
+  `password` varchar(255) NOT NULL COMMENT 'Stores BCrypt hashed passwords',
+  `last_login` timestamp NULL DEFAULT NULL,
+  `password_reset_token` varchar(255) DEFAULT NULL,
+  `password_reset_expires` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`admin_id`),
   UNIQUE KEY `username` (`username`)
 ) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -40,7 +43,7 @@ CREATE TABLE `Admin` (
 
 LOCK TABLES `Admin` WRITE;
 /*!40000 ALTER TABLE `Admin` DISABLE KEYS */;
-INSERT INTO `Admin` VALUES (1,'Admin','User1','AdminUser1','password1'),(2,'Admin','User2','AdminUser2','password2'),(3,'Admin','User3','AdminUser3','password3'),(4,'Admin','User4','AdminUser4','password4'),(5,'Admin','User5','AdminUser5','password5');
+INSERT INTO `Admin` VALUES (1,'Admin','User1','AdminUser1','password1',NULL,NULL,NULL),(2,'Admin','User2','AdminUser2','$2b$12$a9087b68a55911ef99d4f7aa7138c32dRESET_REQUIRED_a581e90e-a53a-11ef-99d4-f7aa7138c32d',NULL,NULL,NULL),(3,'Admin','User3','AdminUser3','$2b$12$a90883aaa55911ef99d4f7aa7138c32dRESET_REQUIRED_a581eebd-a53a-11ef-99d4-f7aa7138c32d',NULL,NULL,NULL),(4,'Admin','User4','AdminUser4','$2b$12$a90889bfa55911ef99d4f7aa7138c32dRESET_REQUIRED_a581f3f2-a53a-11ef-99d4-f7aa7138c32d',NULL,NULL,NULL),(5,'Admin','User5','AdminUser5','$2b$12$a9088fd5a55911ef99d4f7aa7138c32dRESET_REQUIRED_a581f925-a53a-11ef-99d4-f7aa7138c32d',NULL,NULL,NULL);
 /*!40000 ALTER TABLE `Admin` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -76,6 +79,157 @@ LOCK TABLES `Audiofiles` WRITE;
 /*!40000 ALTER TABLE `Audiofiles` DISABLE KEYS */;
 INSERT INTO `Audiofiles` VALUES (7,1,1,'Zebra.mp3','2024-10-21',5,'00:03:45',1),(8,2,2,'Bison.mp3','2024-10-21',2,'00:02:43',0),(9,3,3,'Dog.mp3','2024-10-21',5,'00:01:23',1),(10,4,4,'Cat.mp3','2024-10-21',4,'00:04:54',1),(11,5,5,'Bird.mp3','2024-10-21',2,'00:01:04',0),(20,1,14,'Homo_sapiens.mp3','2024-10-30',3,'00:03:30',1),(21,2,15,'Ursus_arctos.mp3','2024-10-30',4,'00:04:15',1),(22,4,16,'Haliaeetus_leucocephalus.mp3','2024-10-30',5,'00:02:50',1),(23,3,17,'Tursiops_truncatus.mp3','2024-10-30',4,'00:05:10',1),(24,2,18,'Loxodonta_africana.mp3','2024-10-30',3,'00:06:00',1),(25,2,19,'Boa_constrictor.mp3','2024-10-30',2,'00:04:45',1),(26,2,20,'Cervus_canadensis.mp3','2024-10-30',5,'00:03:15',1),(27,1,21,'Panthera_tigris.mp3','2024-10-30',4,'00:04:00',1),(28,4,22,'Canis_lupus.mp3','2024-10-30',3,'00:03:40',1),(29,2,23,'Falco_peregrinus.mp3','2024-10-30',4,'00:03:25',1),(30,3,24,'Gorilla_gorilla.mp3','2024-10-30',3,'00:05:25',1),(31,1,25,'Chelonia_mydas.mp3','2024-10-30',2,'00:02:55',1),(32,2,26,'Pan_paniscus.mp3','2024-10-30',5,'00:04:50',1),(33,4,27,'Pongo_pygmaeus.mp3','2024-10-30',4,'00:04:35',1),(34,3,28,'Strix_alba.mp3','2024-10-30',4,'00:03:00',1),(35,3,29,'Equus_caballus.mp3','2024-10-30',5,'00:03:45',1),(36,3,30,'Psittacus_erithacus.mp3','2024-10-30',3,'00:04:05',1),(37,4,31,'Phoenicopterus_ruber.mp3','2024-10-30',4,'00:03:20',1),(38,2,32,'Panthera_leo.mp3','2024-10-30',5,'00:03:35',1),(39,1,33,'Vulpes_vulpes.mp3','2024-10-30',3,'00:02:45',1);
 /*!40000 ALTER TABLE `Audiofiles` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb3 */ ;
+/*!50003 SET character_set_results = utf8mb3 */ ;
+/*!50003 SET collation_connection  = utf8mb3_general_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`remote_user`@`%`*/ /*!50003 TRIGGER after_audiofile_insert
+AFTER INSERT ON `Audiofiles`
+FOR EACH ROW
+BEGIN
+    INSERT INTO `AuditLog` (user_id, action, table_name, record_id)
+    VALUES (NEW.user_id, 'INSERT', 'Audiofiles', NEW.audiofiles_id);
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb3 */ ;
+/*!50003 SET character_set_results = utf8mb3 */ ;
+/*!50003 SET collation_connection  = utf8mb3_general_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`remote_user`@`%`*/ /*!50003 TRIGGER after_audiofile_update
+AFTER UPDATE ON `Audiofiles`
+FOR EACH ROW
+BEGIN
+    INSERT INTO `AuditLog` (user_id, action, table_name, record_id)
+    VALUES (NEW.user_id, 'UPDATE', 'Audiofiles', NEW.audiofiles_id);
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb3 */ ;
+/*!50003 SET character_set_results = utf8mb3 */ ;
+/*!50003 SET collation_connection  = utf8mb3_general_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`remote_user`@`%`*/ /*!50003 TRIGGER after_audiofile_delete
+AFTER DELETE ON `Audiofiles`
+FOR EACH ROW
+BEGIN
+    INSERT INTO `AuditLog` (user_id, action, table_name, record_id)
+    VALUES (OLD.user_id, 'DELETE', 'Audiofiles', OLD.audiofiles_id);
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+
+--
+-- Table structure for table `AuditLog`
+--
+
+DROP TABLE IF EXISTS `AuditLog`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `AuditLog` (
+  `log_id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) DEFAULT NULL,
+  `action` varchar(255) NOT NULL,
+  `table_name` varchar(50) DEFAULT NULL,
+  `record_id` int(11) DEFAULT NULL,
+  `timestamp` timestamp NULL DEFAULT current_timestamp(),
+  `ip_address` varchar(45) DEFAULT NULL,
+  PRIMARY KEY (`log_id`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `AuditLog_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `User` (`user_id`) ON DELETE SET NULL
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `AuditLog`
+--
+
+LOCK TABLES `AuditLog` WRITE;
+/*!40000 ALTER TABLE `AuditLog` DISABLE KEYS */;
+INSERT INTO `AuditLog` VALUES (1,1,'LOGIN',NULL,NULL,'2024-11-22 01:01:37','127.0.0.1'),(2,1,'LOGOUT',NULL,NULL,'2024-11-22 01:03:00','127.0.0.1'),(3,1,'LOGIN',NULL,NULL,'2024-11-22 13:59:28','127.0.0.1'),(4,1,'LOGIN',NULL,NULL,'2024-11-22 13:59:34','127.0.0.1'),(5,6,'LOGIN',NULL,NULL,'2024-11-22 14:12:50','127.0.0.1'),(6,6,'LOGIN',NULL,NULL,'2024-11-22 14:35:16','127.0.0.1'),(7,6,'LOGIN',NULL,NULL,'2024-11-22 14:36:35','127.0.0.1'),(8,6,'LOGIN',NULL,NULL,'2024-11-22 16:59:13','127.0.0.1'),(9,6,'LOGOUT',NULL,NULL,'2024-11-22 17:00:21','127.0.0.1');
+/*!40000 ALTER TABLE `AuditLog` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `LoginAttempts`
+--
+
+DROP TABLE IF EXISTS `LoginAttempts`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `LoginAttempts` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `username` varchar(50) NOT NULL,
+  `ip_address` varchar(45) NOT NULL,
+  `attempt_time` timestamp NULL DEFAULT current_timestamp(),
+  `success` tinyint(1) DEFAULT 0,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `LoginAttempts`
+--
+
+LOCK TABLES `LoginAttempts` WRITE;
+/*!40000 ALTER TABLE `LoginAttempts` DISABLE KEYS */;
+INSERT INTO `LoginAttempts` VALUES (1,'asmith','127.0.0.1','2024-11-21 21:13:46',0);
+/*!40000 ALTER TABLE `LoginAttempts` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `Sessions`
+--
+
+DROP TABLE IF EXISTS `Sessions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `Sessions` (
+  `session_id` varchar(255) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `user_type` enum('admin','user') NOT NULL,
+  `login_time` timestamp NULL DEFAULT current_timestamp(),
+  `expiry_time` timestamp NOT NULL,
+  `ip_address` varchar(45) DEFAULT NULL,
+  PRIMARY KEY (`session_id`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `Sessions_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `User` (`user_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `Sessions`
+--
+
+LOCK TABLES `Sessions` WRITE;
+/*!40000 ALTER TABLE `Sessions` DISABLE KEYS */;
+INSERT INTO `Sessions` VALUES ('0b988f77dfd57e7500dd92940d76714060d52b32d43b2b8a43277394b18bb4c8',1,'user','2024-11-22 13:59:27','2024-11-23 13:59:26','127.0.0.1'),('0c29baf01b4ec66785beb71ea260bc40519eb663f2fe5ed7c3669ab00393b945',6,'user','2024-11-22 14:35:15','2024-11-23 14:35:15','127.0.0.1'),('755ce17c7cc266c38415f52103c2f6958d7e6143813342c1633a3f433bc96f0a',1,'user','2024-11-22 13:59:31','2024-11-23 13:59:31','127.0.0.1'),('97c7f444cec287916384c16065a4cf8e4f4e21460ce34f6266682afebe59f7dc',6,'user','2024-11-22 14:36:35','2024-11-23 14:36:34','127.0.0.1'),('bf80023f9f14c10e6ede1a6269d984151e82f1b905662a91a9d7e5ea41f2ecd3',6,'user','2024-11-22 14:12:49','2024-11-23 14:12:50','127.0.0.1');
+/*!40000 ALTER TABLE `Sessions` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -124,11 +278,14 @@ CREATE TABLE `User` (
   `first_name` varchar(50) NOT NULL,
   `last_name` varchar(50) NOT NULL,
   `username` varchar(50) NOT NULL,
-  `password` varchar(255) NOT NULL,
+  `password` varchar(255) NOT NULL COMMENT 'Stores BCrypt hashed passwords',
   `is_certified` tinyint(1) DEFAULT 0,
+  `last_login` timestamp NULL DEFAULT NULL,
+  `password_reset_token` varchar(255) DEFAULT NULL,
+  `password_reset_expires` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`user_id`),
   UNIQUE KEY `username` (`username`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -137,7 +294,7 @@ CREATE TABLE `User` (
 
 LOCK TABLES `User` WRITE;
 /*!40000 ALTER TABLE `User` DISABLE KEYS */;
-INSERT INTO `User` VALUES (1,'Alice','Smith','asmith','password1',1),(2,'Bob','Ross','bross','password2',0),(3,'Charlie','Brown','cbrown','password3',1),(4,'Dana','White','dwhite','password4',1),(5,'P','Diddy','pdiddy','password5',0);
+INSERT INTO `User` VALUES (1,'Research','Lead','researcher_lead','89cdgpHSaBHvv2sNCWnZqwVW9jIRA1mJQyD8ZxfcYK4',1,NULL,NULL,NULL),(2,'Field','Scientist','field_sci1','$2b$12$a90a1322a55911ef99d4f7aa7138c32dRESET_REQUIRED_a5ac8a15-a53a-11ef-99d4-f7aa7138c32d',0,NULL,NULL,NULL),(3,'Lab','Technician','lab_tech1','$2b$12$a90a19afa55911ef99d4f7aa7138c32dRESET_REQUIRED_a5ac9065-a53a-11ef-99d4-f7aa7138c32d',1,NULL,NULL,NULL),(4,'Data','Analyst','data_analyst1','$2b$12$a90a1fdfa55911ef99d4f7aa7138c32dRESET_REQUIRED_a5ac9620-a53a-11ef-99d4-f7aa7138c32d',1,NULL,NULL,NULL),(5,'Wildlife','Observer','wildlife_obs1','$2b$12$a90a2609a55911ef99d4f7aa7138c32dRESET_REQUIRED_a5ac9b9c-a53a-11ef-99d4-f7aa7138c32d',0,NULL,NULL,NULL),(6,'Miguel','Lopez','mlopez','5RFVmneyvwtVYUyYnHHrq6WHRtV0pNldExzPvQNJW+A',0,NULL,NULL,NULL);
 /*!40000 ALTER TABLE `User` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -150,117 +307,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
-ALTER TABLE `Admin` 
-MODIFY COLUMN `password` VARCHAR(255) NOT NULL COMMENT 'Stores BCrypt hashed passwords',
-ADD COLUMN `last_login` TIMESTAMP NULL,
-ADD COLUMN `password_reset_token` VARCHAR(255) NULL,
-ADD COLUMN `password_reset_expires` TIMESTAMP NULL;
-
-ALTER TABLE `User`
-MODIFY COLUMN `password` VARCHAR(255) NOT NULL COMMENT 'Stores BCrypt hashed passwords',
-ADD COLUMN `last_login` TIMESTAMP NULL,
-ADD COLUMN `password_reset_token` VARCHAR(255) NULL,
-ADD COLUMN `password_reset_expires` TIMESTAMP NULL;
-
-CREATE TABLE `LoginAttempts` (
-    `id` INT PRIMARY KEY AUTO_INCREMENT,
-    `username` VARCHAR(50) NOT NULL,
-    `ip_address` VARCHAR(45) NOT NULL,
-    `attempt_time` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    `success` BOOLEAN DEFAULT FALSE
-);
-
-CREATE TABLE `Sessions` (
-    `session_id` VARCHAR(255) PRIMARY KEY,
-    `user_id` INT,
-    `user_type` ENUM('admin', 'user') NOT NULL,
-    `login_time` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    `expiry_time` TIMESTAMP NOT NULL,
-    `ip_address` VARCHAR(45),
-    FOREIGN KEY (`user_id`) REFERENCES `User`(`user_id`) ON DELETE CASCADE
-);
-
-CREATE TABLE `AuditLog` (
-    `log_id` INT PRIMARY KEY AUTO_INCREMENT,
-    `user_id` INT,
-    `action` VARCHAR(255) NOT NULL,
-    `table_name` VARCHAR(50),
-    `record_id` INT,
-    `timestamp` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    `ip_address` VARCHAR(45),
-    FOREIGN KEY (`user_id`) REFERENCES `User`(`user_id`) ON DELETE SET NULL
-);
-
-UPDATE `Admin` SET `password` = CONCAT('RESET_REQUIRED_', UUID());
-UPDATE `User` SET `password` = CONCAT('RESET_REQUIRED_', UUID());
-
-DELIMITER //
-
-CREATE TRIGGER after_audiofile_insert
-AFTER INSERT ON `Audiofiles`
-FOR EACH ROW
-BEGIN
-    INSERT INTO `AuditLog` (user_id, action, table_name, record_id)
-    VALUES (NEW.user_id, 'INSERT', 'Audiofiles', NEW.audiofiles_id);
-END //
-
-CREATE TRIGGER after_audiofile_update
-AFTER UPDATE ON `Audiofiles`
-FOR EACH ROW
-BEGIN
-    INSERT INTO `AuditLog` (user_id, action, table_name, record_id)
-    VALUES (NEW.user_id, 'UPDATE', 'Audiofiles', NEW.audiofiles_id);
-END //
-
-CREATE TRIGGER after_audiofile_delete
-AFTER DELETE ON `Audiofiles`
-FOR EACH ROW
-BEGIN
-    INSERT INTO `AuditLog` (user_id, action, table_name, record_id)
-    VALUES (OLD.user_id, 'DELETE', 'Audiofiles', OLD.audiofiles_id);
-END //
-
-CREATE PROCEDURE UpdatePassword(
-    IN p_username VARCHAR(50),
-    IN p_user_type ENUM('admin', 'user'),
-    IN p_hashed_password VARCHAR(255)
-)
-BEGIN
-    IF p_user_type = 'admin' THEN
-        UPDATE `Admin` 
-        SET password = p_hashed_password,
-            password_reset_token = NULL,
-            password_reset_expires = NULL
-        WHERE username = p_username;
-    ELSE
-        UPDATE `User` 
-        SET password = p_hashed_password,
-            password_reset_token = NULL,
-            password_reset_expires = NULL
-        WHERE username = p_username;
-    END IF;
-END //
-
-CREATE PROCEDURE CreateNewUser(
-    IN p_first_name VARCHAR(50),
-    IN p_last_name VARCHAR(50),
-    IN p_username VARCHAR(50),
-    IN p_hashed_password VARCHAR(255),
-    IN p_is_certified TINYINT(1)
-)
-BEGIN
-    INSERT INTO `User` (first_name, last_name, username, password, is_certified)
-    VALUES (p_first_name, p_last_name, p_username, p_hashed_password, p_is_certified);
-END //
-
-CREATE PROCEDURE LogLoginAttempt(
-    IN p_username VARCHAR(50),
-    IN p_ip_address VARCHAR(45),
-    IN p_success BOOLEAN
-)
-BEGIN
-    INSERT INTO `LoginAttempts` (username, ip_address, success)
-    VALUES (p_username, p_ip_address, p_success);
-END //
-
-DELIMITER ;
+-- Dump completed on 2024-11-22 12:02:14

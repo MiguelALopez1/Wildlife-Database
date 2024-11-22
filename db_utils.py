@@ -147,6 +147,33 @@ class DatabaseConnection:
             return False, f"Error creating user: {str(e)}"
         finally:
             cursor.close()
+    def change_password(self, user_id: str, current_password: str, new_password: str) -> tuple:
+        """Change user password with verification."""
+        cursor = self.get_cursor()
+        try:
+            # Verify current password
+            cursor.execute("""
+                SELECT username FROM User 
+                WHERE user_id = %s AND password = ed25519_password(%s)
+            """, (user_id, current_password))
+            
+            if not cursor.fetchone():
+                return False, "Current password is incorrect"
+            
+            # Update to new password
+            cursor.execute("""
+                UPDATE User 
+                SET password = ed25519_password(%s) 
+                WHERE user_id = %s
+            """, (new_password, user_id))
+            
+            self.conn.commit()
+            return True, "Password changed successfully"
+        except Exception as e:
+            logger.error(f"Password change error: {str(e)}")
+            return False, f"Error changing password: {str(e)}"
+        finally:
+            cursor.close()
 
 # Create a global instance
 db = DatabaseConnection()

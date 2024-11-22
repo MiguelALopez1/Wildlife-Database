@@ -5,6 +5,7 @@ from delete import init_delete_frame
 from update import init_update_frame
 from db_utils import db
 from signup import init_signup_frame
+from password_change import init_password_change_frame
 
 class WildlifeApp:
     def __init__(self, root):
@@ -24,9 +25,12 @@ class WildlifeApp:
         self.login_frame = self.create_login_frame()
         self.launch_frame = self.create_launch_frame()
         self.signup_frame = init_signup_frame(root, self.show_login_frame)
+        
+        # Initialize as None - will be created when needed
         self.insert_frame = None
         self.delete_frame = None
         self.update_frame = None
+        self.password_frame = None  # Added this line
 
         # Show login frame
         self.show_login_frame()
@@ -54,6 +58,7 @@ class WildlifeApp:
         Button(frame, text="Insert", command=lambda: self.show_frame('insert')).pack(pady=10)
         Button(frame, text="Delete", command=lambda: self.show_frame('delete')).pack(pady=10)
         Button(frame, text="Update", command=lambda: self.show_frame('update')).pack(pady=10)
+        Button(frame, text="Change Password", command=lambda: self.show_frame('password')).pack(pady=10)
         Button(frame, text="Logout", command=self.logout, font=("Helvetica", 12)).pack(pady=20)
         
         return frame
@@ -66,8 +71,8 @@ class WildlifeApp:
             success, message, result = db.verify_user_credentials(username, password)
             
             if success:
-                self.user_id.set(str(result[1]))
-                self.user_type = result[0]
+                self.user_id.set(str(result[1]))  # id
+                self.user_type = result[0]  # type
                 self.session_id = db.create_session(result[1], result[0])
                 db.log_activity(result[1], "LOGIN")
                 self.show_launch_frame()
@@ -92,9 +97,14 @@ class WildlifeApp:
         self.show_login_frame()
 
     def show_login_frame(self):
-        for frame in [self.launch_frame, self.insert_frame, self.delete_frame, self.update_frame, self.signup_frame]:
+        # Hide all other frames
+        frames = [self.launch_frame, self.insert_frame, self.delete_frame, 
+                 self.update_frame, self.signup_frame]
+        for frame in frames:
             if frame:
                 frame.pack_forget()
+        if self.password_frame:  # Check if password_frame exists before hiding
+            self.password_frame.pack_forget()
         self.login_frame.pack()
 
     def show_signup_frame(self):
@@ -125,6 +135,10 @@ class WildlifeApp:
             if not self.update_frame:
                 self.update_frame = init_update_frame(self.root, self.user_id, self.show_launch_frame)
             self.update_frame.pack()
+        elif frame_name == 'password':
+            if not self.password_frame:
+                self.password_frame = init_password_change_frame(self.root, self.user_id, self.show_launch_frame)
+            self.password_frame.pack()
 
     def verify_session(self):
         if not self.session_id:
