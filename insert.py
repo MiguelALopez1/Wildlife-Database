@@ -1,12 +1,12 @@
 from tkinter import *
 from tkinter import filedialog, messagebox
 from mutagen.mp3 import MP3
-from db_connection import conn
 import os
 import datetime
+from db_utils import db
 
 # Set up database cursor
-cursor = conn.cursor()
+cursor = db.get_cursor()
 
 def init_insert_frame(root, user_id, init_launch_frame):
     # Variables for insert form
@@ -71,7 +71,7 @@ def init_insert_frame(root, user_id, init_launch_frame):
         )
 
         # Commit the transaction
-        conn.commit()
+        db.connect().commit()
         messagebox.showinfo("Success", "Audio file and taxonomy data uploaded successfully!")
 
     # Create a canvas for scroll functionality

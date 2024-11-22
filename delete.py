@@ -1,9 +1,9 @@
 from tkinter import *
 from tkinter import messagebox
-from db_connection import conn
+from db_utils import db
 
 # Set up database cursor
-cursor = conn.cursor()
+cursor = db.get_cursor()
 
 def init_delete_frame(root, user_id, init_launch_frame):
     delete_frame = Frame(root, width=800, height=600)

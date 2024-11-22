@@ -1,9 +1,9 @@
 from tkinter import *
 from tkinter import messagebox
-from db_connection import conn
+from db_utils import db
 
 # Set up database cursor
-cursor = conn.cursor()
+cursor = db.get_cursor
 
 def init_update_frame(root, user_id, init_launch_frame):
     # Set fixed size for the update frame
@@ -84,7 +84,7 @@ def init_update_frame(root, user_id, init_launch_frame):
                         `order` = %s, family = %s, genus = %s, species = %s
                         WHERE audiofile_id = %s
                     """, (domain.get(), kingdom.get(), phylum.get(), class_field.get(), order.get(), family.get(), genus.get(), species.get(), audio_id))
-                    conn.commit()
+                    db.connect().commit()
                     messagebox.showinfo("Success", "Taxonomy details updated successfully.")
                     fetch_audio_files()  # Refresh the list after updating
                     file_id_to_update.set("")
