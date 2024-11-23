@@ -1,8 +1,6 @@
 # Wildlife-Database
 ## Instructions
 
-  
-
 1.  **install packages**:
 
 ```sh
