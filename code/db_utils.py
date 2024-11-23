@@ -305,6 +305,21 @@ class DatabaseConnection:
             return False
         finally:
             cursor.close()
+            
+    def get_table_data(self, table_name: str):
+        """Retrieve all data and column names from the specified table."""
+        cursor = self.get_cursor()
+        try:
+            cursor.execute(f"SELECT * FROM {table_name}")
+            data = cursor.fetchall()
+            column_names = [desc[0] for desc in cursor.description]
+            logger.debug(f"Retrieved data from table {table_name}: {data}")
+            return column_names, data
+        except Exception as e:
+            logger.error(f"Error retrieving data from table {table_name}: {str(e)}")
+            return [], []
+        finally:
+            cursor.close()
 
 # Create a global instance
 db = DatabaseConnection()

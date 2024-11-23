@@ -1,5 +1,7 @@
 from tkinter import *
 from tkinter import messagebox
+from tkinter import ttk
+import pygame
 from insert import init_insert_frame
 from delete import init_delete_frame
 from update import init_update_frame
@@ -7,6 +9,11 @@ from db_utils import db
 from signup import init_signup_frame
 from password_change import init_password_change_frame
 from admin_panel import init_admin_panel
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 class WildlifeApp:
     def __init__(self, root):
@@ -14,6 +21,9 @@ class WildlifeApp:
         self.root.title("Wildlife Call Database - Audio Management")
         self.root.geometry("800x600")
         self.root.resizable(False, False)
+        
+        # Initialize pygame mixer for sound
+        pygame.mixer.init()
 
         # Variables
         self.username = StringVar()
@@ -33,6 +43,10 @@ class WildlifeApp:
         self.update_frame = None
         self.password_frame = None
         self.admin_frame = None
+        self.tables_frame = None
+        self.view_options_frame = None
+        self.taxonomy_frame = None
+        self.audiofiles_frame = None
 
         # Show login frame
         self.show_login_frame()
@@ -57,6 +71,7 @@ class WildlifeApp:
         frame = Frame(self.root)
         Label(frame, text="Wildlife Call Database", font=("Helvetica", 16)).pack(pady=20)
         
+        Button(frame, text="View", command=self.show_view_options).pack(pady=10)
         Button(frame, text="Insert", command=lambda: self.show_frame('insert')).pack(pady=10)
         Button(frame, text="Delete", command=lambda: self.show_frame('delete')).pack(pady=10)
         Button(frame, text="Update", command=lambda: self.show_frame('update')).pack(pady=10)
@@ -102,7 +117,9 @@ class WildlifeApp:
     def show_login_frame(self):
         # Hide all other frames
         frames = [self.launch_frame, self.insert_frame, self.delete_frame, 
-                 self.update_frame, self.signup_frame, self.admin_frame]
+                 self.update_frame, self.signup_frame, self.admin_frame, 
+                 self.tables_frame, self.view_options_frame, self.taxonomy_frame, 
+                 self.audiofiles_frame]
         for frame in frames:
             if frame:
                 frame.pack_forget()
@@ -117,7 +134,9 @@ class WildlifeApp:
     def show_launch_frame(self):
         # Hide all frames except launch
         frames = [self.login_frame, self.insert_frame, self.delete_frame, 
-                 self.update_frame, self.signup_frame, self.admin_frame]
+                 self.update_frame, self.signup_frame, self.admin_frame, 
+                 self.tables_frame, self.view_options_frame, self.taxonomy_frame, 
+                 self.audiofiles_frame]
         for frame in frames:
             if frame:
                 frame.pack_forget()
@@ -140,6 +159,103 @@ class WildlifeApp:
             self.admin_frame = init_admin_panel(self.root, self.user_id, self.show_launch_frame)
         self.admin_frame.pack()
 
+
+    def show_view_options(self):
+        self.hide_all_frames()
+        self.view_options_frame = Frame(self.root)
+        self.view_options_frame.pack(fill=BOTH, expand=True)
+
+        Label(self.view_options_frame, text="View Options", font=("Helvetica", 16)).pack(pady=20)
+        
+        Button(self.view_options_frame, text="View Taxonomy Table", command=self.show_taxonomy_table, font=("Helvetica", 14)).pack(pady=10)
+        Button(self.view_options_frame, text="View Audiofiles Table", command=self.show_audiofiles_table, font=("Helvetica", 14)).pack(pady=10)
+        Button(self.view_options_frame, text="Back", command=self.show_launch_frame, font=("Helvetica", 12)).pack(pady=10)
+    
+    
+    def show_taxonomy_table(self):
+        self.hide_all_frames()
+        self.taxonomy_frame = Frame(self.root)
+        self.taxonomy_frame.pack(fill=BOTH, expand=True)
+
+        Label(self.taxonomy_frame, text="Taxonomy Table", font=("Helvetica", 16)).pack(pady=20)
+        
+        column_names, taxonomy_data = db.get_table_data("Taxonomy")
+        taxonomy_table = ttk.Treeview(self.taxonomy_frame, columns=column_names, show="headings")
+        taxonomy_table.pack(fill=BOTH, expand=True)
+
+        for col in column_names:
+            taxonomy_table.heading(col, text=col)
+            taxonomy_table.column(col, width=100)
+
+        # Populate taxonomy_table with data from the database
+        for row in taxonomy_data:
+            taxonomy_table.insert("", "end", values=row)
+        
+        Button(self.taxonomy_frame, text="Back", command=self.show_view_options, font=("Helvetica", 12)).pack(pady=10)
+    
+
+    def show_audiofiles_table(self):
+        self.hide_all_frames()
+        self.audiofiles_frame = Frame(self.root)
+        self.audiofiles_frame.pack(fill=BOTH, expand=True)
+
+        Label(self.audiofiles_frame, text="Audiofiles Table", font=("Helvetica", 16)).pack(pady=20)
+        
+        column_names, audiofiles_data = db.get_table_data("Audiofiles")
+        audiofiles_table = ttk.Treeview(self.audiofiles_frame, columns=column_names, show="headings")
+        audiofiles_table.pack(fill=BOTH, expand=True)
+
+        for col in column_names:
+            audiofiles_table.heading(col, text=col)
+            audiofiles_table.column(col, width=100)
+
+        # Populate audiofiles_table with data from the database
+        for row in audiofiles_data:
+            audiofiles_table.insert("", "end", values=row)
+        
+        # Add Play button
+        play_button = Button(self.audiofiles_frame, text="Play", command=self.play_selected_audio, font=("Helvetica", 12))
+        play_button.pack(pady=10)
+
+        Button(self.audiofiles_frame, text="Back", command=self.show_view_options, font=("Helvetica", 12)).pack(pady=10)
+
+    def play_selected_audio(self):
+        if not hasattr(self, 'audiofiles_frame'):
+            logger.error("Audiofiles frame is not initialized.")
+            return
+
+        # Find the Treeview widget
+        audiofiles_table = self.audiofiles_frame.winfo_children()[0]  # Assuming the Treeview is the first child of the frame
+        
+        # Get the selected item
+        selected_item = audiofiles_table.selection_get()
+        if selected_item:
+            # Get the data for the selected row
+            item = audiofiles_table.item(selected_item)
+            logger.info(f"Selected audio file: {item}")
+
+            # Assuming the second column contains the file path
+            audio_file = item['values'][1]
+            if audio_file:
+                try:
+                    # Play the audio file using pygame
+                    pygame.mixer.music.load(audio_file)
+                    pygame.mixer.music.play()
+                    logger.info(f"Playing audio file: {audio_file}")
+                except Exception as e:
+                    logger.error(f"Error playing audio file: {str(e)}")
+                    messagebox.showerror("Error", f"Could not play audio file: {str(e)}")
+            else:
+                messagebox.showerror("Error", "No audio file path found in the selected row.")
+        else:
+            messagebox.showerror("Error", "No row selected. Please select an audio file first.")
+
+            
+    def hide_all_frames(self):
+        for frame in [self.login_frame, self.launch_frame, self.signup_frame, self.insert_frame, self.delete_frame, self.update_frame, self.password_frame, self.admin_frame, self.tables_frame, self.view_options_frame, self.taxonomy_frame, self.audiofiles_frame]:
+            if frame is not None:
+                frame.pack_forget()
+    
     def show_frame(self, frame_name):
         if not self.verify_session():
             messagebox.showerror("Error", "Session expired. Please login again.")

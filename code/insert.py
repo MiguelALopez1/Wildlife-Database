@@ -37,6 +37,8 @@ def init_insert_frame(root, user_id, init_launch_frame):
                 if os.path.getsize(file_path) == 0:
                     duration.set("00:00:00")
                 else:
+                    #add debug statement of the file_path
+                    print(file_path)
                     audio = MP3(file_path)
                     duration_seconds = int(audio.info.length)
                     duration.set(f"{duration_seconds // 3600:02}:{(duration_seconds % 3600) // 60:02}:{duration_seconds % 60:02}")
