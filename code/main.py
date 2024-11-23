@@ -10,6 +10,9 @@ from signup import init_signup_frame
 from password_change import init_password_change_frame
 from admin_panel import init_admin_panel
 import logging
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -19,7 +22,7 @@ class WildlifeApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Wildlife Call Database - Audio Management")
-        self.root.geometry("800x600")
+        self.root.geometry("800x800")
         self.root.resizable(False, False)
         
         # Initialize pygame mixer for sound
@@ -47,7 +50,7 @@ class WildlifeApp:
         self.view_options_frame = None
         self.taxonomy_frame = None
         self.audiofiles_frame = None
-
+        
         # Show login frame
         self.show_login_frame()
 
@@ -169,6 +172,9 @@ class WildlifeApp:
         
         Button(self.view_options_frame, text="View Taxonomy Table", command=self.show_taxonomy_table, font=("Helvetica", 14)).pack(pady=10)
         Button(self.view_options_frame, text="View Audiofiles Table", command=self.show_audiofiles_table, font=("Helvetica", 14)).pack(pady=10)
+        Button(self.view_options_frame, text="User Audio Report", command=self.show_user_audio_report, font=("Helvetica", 14)).pack(pady=10)
+        Button(self.view_options_frame, text="Species Duration Report", command=self.show_species_duration_report, font=("Helvetica", 14)).pack(pady=10)
+
         Button(self.view_options_frame, text="Back", command=self.show_launch_frame, font=("Helvetica", 12)).pack(pady=10)
     
     
@@ -252,6 +258,135 @@ class WildlifeApp:
                 messagebox.showerror("Error", "No audio file path found in the selected row.")
         else:
             messagebox.showerror("Error", "No row selected. Please select an audio file first.")
+    
+    
+    def create_scrollable_canvas(self, parent):
+        """Create a scrollable canvas with a vertical scrollbar."""
+        canvas = Canvas(parent)
+        scrollbar = Scrollbar(parent, orient="vertical", command=canvas.yview)
+        scrollable_frame = Frame(canvas)
+
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        return canvas, scrollable_frame
+
+    def show_user_audio_report(self):
+        """Show a table and chart of audio files uploaded per user."""
+        self.hide_all_frames()
+        self.tables_frame = Frame(self.root)
+        self.tables_frame.pack(fill=BOTH, expand=True)
+
+        # Create a scrollable canvas
+        canvas, scrollable_frame = self.create_scrollable_canvas(self.tables_frame)
+
+        Label(scrollable_frame, text="Number of Audio Files Uploaded Per User", font=("Helvetica", 16)).pack(pady=20)
+
+        # Fetch data for the report
+        query = """
+            SELECT user_id, COUNT(*) AS total_audio_files
+            FROM Audiofiles
+            GROUP BY user_id
+        """
+        cursor = db.get_cursor()
+        cursor.execute(query)
+        report_data = cursor.fetchall()
+        cursor.close()
+
+        # Create a table
+        columns = ("User ID", "Total Audio Files")
+        tree = ttk.Treeview(scrollable_frame, columns=columns, show="headings")
+        tree.pack(fill=BOTH, expand=True)
+
+        for col in columns:
+            tree.heading(col, text=col)
+            tree.column(col, width=150)
+
+        # Insert data into the table
+        for row in report_data:
+            tree.insert("", "end", values=row)
+
+        # Create a bar chart
+        user_ids = [str(row[0]) for row in report_data]
+        audio_counts = [row[1] for row in report_data]
+
+        figure = Figure(figsize=(6, 4), dpi=100)
+        ax = figure.add_subplot(111)
+        ax.bar(user_ids, audio_counts, color="skyblue")
+        ax.set_title("Audio Files Per User")
+        ax.set_xlabel("User ID")
+        ax.set_ylabel("Number of Audio Files")
+
+        canvas_chart = FigureCanvasTkAgg(figure, scrollable_frame)
+        canvas_chart.get_tk_widget().pack()
+
+        Button(scrollable_frame, text="Back", command=self.show_view_options, font=("Helvetica", 12)).pack(pady=10)
+
+    def show_species_duration_report(self):
+        """Show a table and chart of average audio file duration per species."""
+        self.hide_all_frames()
+        self.tables_frame = Frame(self.root)
+        self.tables_frame.pack(fill=BOTH, expand=True)
+
+        # Create a scrollable canvas
+        canvas, scrollable_frame = self.create_scrollable_canvas(self.tables_frame)
+
+        Label(scrollable_frame, text="Average Duration of Audio Files Per Species", font=("Helvetica", 16)).pack(pady=20)
+
+        # Fetch data for the report
+        query = """
+            SELECT t.species, AVG(TIME_TO_SEC(a.duration)) AS avg_duration_seconds
+            FROM Audiofiles a
+            JOIN Taxonomy t ON a.taxonomy_id = t.taxonomy_id
+            GROUP BY t.species
+        """
+        cursor = db.get_cursor()
+        cursor.execute(query)
+        report_data = cursor.fetchall()
+        cursor.close()
+
+        # Create a table
+        columns = ("Species", "Average Duration (seconds)")
+        tree = ttk.Treeview(scrollable_frame, columns=columns, show="headings")
+        tree.pack(fill=BOTH, expand=True)
+
+        for col in columns:
+            tree.heading(col, text=col)
+            tree.column(col, width=150)
+
+        # Insert data into the table
+        for row in report_data:
+            tree.insert("", "end", values=row)
+
+        # Create a bar chart
+        species = [row[0] for row in report_data]
+        durations = [row[1] for row in report_data]
+
+        figure = Figure(figsize=(6, 4), dpi=100)
+        ax = figure.add_subplot(111)
+        ax.bar(species, durations, color="lightgreen")
+        ax.set_title("Average Audio Duration Per Species")
+        ax.set_xlabel("Species")
+        ax.set_ylabel("Duration (seconds)")
+        ax.tick_params(axis="x", rotation=45)
+
+        canvas_chart = FigureCanvasTkAgg(figure, scrollable_frame)
+        canvas_chart.get_tk_widget().pack()
+
+        Button(scrollable_frame, text="Back", command=self.show_view_options, font=("Helvetica", 12)).pack(pady=10)
+
+
+
+
+
 
             
     def hide_all_frames(self):
