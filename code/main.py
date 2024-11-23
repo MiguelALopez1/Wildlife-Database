@@ -225,17 +225,18 @@ class WildlifeApp:
             return
 
         # Find the Treeview widget
-        audiofiles_table = self.audiofiles_frame.winfo_children()[0]  # Assuming the Treeview is the first child of the frame
+        logger.info(f"Children of audiofiles_frame: {self.audiofiles_frame.winfo_children()}")
+        audiofiles_table = self.audiofiles_frame.winfo_children()[1]  # Assuming the Treeview is the first child of the frame
         
         # Get the selected item
-        selected_item = audiofiles_table.selection_get()
+        selected_item = audiofiles_table.selection()
+        
         if selected_item:
             # Get the data for the selected row
             item = audiofiles_table.item(selected_item)
             logger.info(f"Selected audio file: {item}")
 
-            # Assuming the second column contains the file path
-            audio_file = item['values'][1]
+            audio_file = item['values'][3]
             if audio_file:
                 try:
                     # Play the audio file using pygame
