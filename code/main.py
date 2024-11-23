@@ -206,8 +206,9 @@ class WildlifeApp:
         audiofiles_table.pack(fill=BOTH, expand=True)
 
         for col in column_names:
-            audiofiles_table.heading(col, text=col)
-            audiofiles_table.column(col, width=100)
+            if col != "audio_data":
+                audiofiles_table.heading(col, text=col)
+                audiofiles_table.column(col, width=100)
 
         # Populate audiofiles_table with data from the database
         for row in audiofiles_data:
@@ -236,9 +237,10 @@ class WildlifeApp:
             item = audiofiles_table.item(selected_item)
             logger.info(f"Selected audio file: {item}")
 
-            audio_file = item['values'][3]
+            audio_file = item['values'][3] # file name
             if audio_file:
                 try:
+                    audio_file = "audio/" + audio_file
                     # Play the audio file using pygame
                     pygame.mixer.music.load(audio_file)
                     pygame.mixer.music.play()
