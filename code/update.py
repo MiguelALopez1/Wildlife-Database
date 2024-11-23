@@ -39,6 +39,7 @@ def init_update_frame(root, user_id, init_launch_frame):
 
         # Fetch audio files and taxonomy details from the database
         try:
+            cursor = db.get_cursor()
             query = """
                 SELECT a.audiofiles_id, a.file_name, t.domain, t.kingdom, t.phylum, t.class, t.order, 
                        t.family, t.genus, t.species
@@ -75,6 +76,7 @@ def init_update_frame(root, user_id, init_launch_frame):
         audio_id = file_id_to_update.get().strip()
         if audio_id:
             try:
+                cursor = db.get_cursor()
                 cursor.execute("SELECT audiofiles_id FROM Audiofiles WHERE audiofiles_id = %s AND user_id = %s", (audio_id, user_id.get()))
                 file_check = cursor.fetchone()
 

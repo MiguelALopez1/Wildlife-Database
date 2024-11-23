@@ -47,6 +47,7 @@ def init_delete_frame(root, user_id, init_launch_frame):
 
         if audio_id:
             try:
+                
                 # Check if the audio ID exists for the current user
                 cursor.execute("SELECT file_name FROM Audiofiles WHERE audiofiles_id = %s AND user_id = %s", (audio_id, user_id.get()))
                 file_check = cursor.fetchone()
@@ -54,7 +55,7 @@ def init_delete_frame(root, user_id, init_launch_frame):
                 if file_check:
                     # Proceed with deletion
                     cursor.execute("DELETE FROM Audiofiles WHERE audiofiles_id = %s", (audio_id,))
-                    conn.commit()
+                    db.conn.commit()
                     messagebox.showinfo("Success", f"Deleted file '{file_check[0]}' successfully.")
                     fetch_audio_files()  # Refresh the list after deletion
                     file_id_to_delete.set("")  # Clear the input field
